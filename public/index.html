@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Card Clash Lite — Play together</title>
+<style>
+:root{--bg:#101b20;--felt:#173c35;--felt2:#204b41;--cream:#f7f4e9;--ink:#152328;--muted:#a9c1b9;--gold:#f6cf65}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at center,#1c3834,#0c151a 75%);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:#f6f8f4;min-height:100vh}
+button,input{font:inherit}button{cursor:pointer;border:0}button:disabled{opacity:.4;cursor:not-allowed}
+.wrap{max-width:1180px;margin:auto;padding:24px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}.brand{font-size:24px;font-weight:900;letter-spacing:-1px}.brand span{color:var(--gold)}.pill{background:#ffffff12;border:1px solid #ffffff24;padding:8px 13px;border-radius:999px;color:#dce8e2;font-size:13px}
+.panel{max-width:600px;margin:8vh auto;background:#f8f7f0;color:var(--ink);border-radius:24px;padding:32px;box-shadow:0 25px 70px #0005}.panel h1{margin:0 0 8px;font-size:30px}.sub{color:#64716d;margin:0 0 24px}.field{display:block;width:100%;padding:14px 15px;border:1px solid #d7ddd7;border-radius:12px;margin:10px 0 14px;background:white;color:#18282a;outline-color:#397d68}.row{display:flex;gap:12px}.btn{padding:13px 18px;border-radius:12px;background:#173c35;color:white;font-weight:750}.btn.secondary{background:#e6ece6;color:#19362f}.btn.gold{background:#f6cf65;color:#1d302b}.btn.full{width:100%}.small{font-size:13px;color:#65736d}.error{color:#a33d39;min-height:20px;font-size:14px;margin-top:8px}
+.lobby{max-width:760px;margin:5vh auto;background:#173c35;border:1px solid #ffffff1c;border-radius:24px;padding:28px}.lobby-head{display:flex;justify-content:space-between;align-items:center;gap:15px}.code{font-size:27px;letter-spacing:5px;color:var(--gold);font-weight:900}.players{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:24px 0}.player{background:#ffffff0c;border:1px solid #ffffff16;padding:15px;border-radius:15px}.player b{display:block}.badge{font-size:11px;color:var(--gold);margin-top:5px}
+.table{max-width:1100px;margin:0 auto}.tabletop{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.opponents{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.opponent{background:#ffffff0c;border:1px solid #ffffff20;border-radius:14px;padding:10px 14px;min-width:100px}.opponent.active{border-color:var(--gold);box-shadow:0 0 0 1px #f6cf6544}.opponent small{display:block;color:var(--muted)}.arena{min-height:260px;display:flex;justify-content:center;align-items:center;gap:28px;background:linear-gradient(140deg,#204b41,#15382f);border:1px solid #ffffff16;border-radius:28px;padding:24px;position:relative;overflow:hidden}.pile{display:flex;flex-direction:column;align-items:center;gap:9px}.pile label{font-size:12px;color:#c3d8ce}.card{width:78px;height:116px;border:3px solid #fff;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;color:white;font-size:35px;font-weight:950;text-shadow:0 2px 2px #0004;box-shadow:0 8px 15px #0004;user-select:none}.card:before{content:"";position:absolute;inset:7px;border:1.5px solid #ffffffb0;border-radius:50%;transform:rotate(-28deg) scale(.72,1.15)}.card span{z-index:1}.red{background:#e84b50}.blue{background:#397fe5}.green{background:#2fa66b}.yellow{background:#f2c936;color:#26332b}.back{background:repeating-linear-gradient(45deg,#d34d51,#d34d51 7px,#b83d46 7px,#b83d46 14px);font-size:22px}.back:before{border-color:#fff8}.handarea{margin-top:22px;text-align:center}.hand{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:12px 0}.hand .card{width:67px;height:100px;font-size:29px;transition:transform .15s,margin .15s}.hand .card.playable{cursor:pointer;box-shadow:0 0 0 3px var(--gold),0 10px 18px #0004;transform:translateY(-8px)}.hand .card.playable:hover{transform:translateY(-15px)}.hand .card.dim{opacity:.48;cursor:not-allowed}.actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}.notice{color:var(--gold);min-height:24px;margin:12px 0}.winner{max-width:600px;margin:7vh auto;text-align:center;background:#173c35;padding:35px;border-radius:26px;border:1px solid #ffffff22}.winner h1{font-size:40px;color:var(--gold)}.rules{margin-top:24px;border-top:1px solid #dce2dc;padding-top:16px;color:#5f6e67;font-size:13px;line-height:1.6}
+@media(max-width:600px){.wrap{padding:14px}.panel{padding:23px;margin:5vh auto}.lobby{padding:20px;margin:3vh auto}.arena{min-height:220px;padding:15px;gap:18px}.card{width:68px;height:102px}.hand .card{width:52px;height:78px;font-size:23px;border-width:2px}.hand{gap:5px}.brand{font-size:21px}.code{font-size:22px}}
+</style>
+</head>
+<body><div class="wrap">
+<header class="top"><div class="brand">CARD <span>CLASH</span></div><div class="pill" id="connection">Connecting…</div></header>
+<main id="app"></main>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket=io();
+const app=document.getElementById("app");
+let state=null, myName="", roomCode="", noticeTimer;
+const colorNames={red:"Red",blue:"Blue",green:"Green",yellow:"Yellow"};
+socket.on("connect",()=>document.getElementById("connection").textContent="Connected");
+socket.on("disconnect",()=>document.getElementById("connection").textContent="Reconnecting…");
+socket.on("notice",msg=>{showNotice(msg);});
+socket.on("state",s=>{state=s;roomCode=s.code;render();});
+function showNotice(msg){const el=document.querySelector(".error,.notice");if(el){el.textContent=msg;clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>el.textContent="",4500)}else alert(msg)}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function cardLabel(c){return c.value==="Skip"?"⊘":c.value==="Reverse"?"↻":c.value;}
+function cardHTML(c,extra=""){return `<div class="card ${c.color} ${extra}"><span>${cardLabel(c)}</span></div>`;}
+function render(){
+ if(!state){home();return;}
+ if(state.status==="lobby"){lobby();return;}
+ if(state.status==="finished"){winner();return;}
+ game();
+}
+function home(){
+ app.innerHTML=`<section class="panel"><h1>Play Card Clash Lite</h1><p class="sub">A quick, friendly card battle. Create a room or join your friends.</p>
+ <label class="small">Your nickname</label><input class="field" id="name" maxlength="18" placeholder="e.g. Purbi" value="${esc(myName)}">
+ <button class="btn full" id="create">Create a room</button><div style="height:12px"></div>
+ <label class="small">Have a room code?</label><input class="field" id="code" maxlength="6" placeholder="Enter 6-character code">
+ <button class="btn secondary full" id="join">Join room</button><div class="error" id="error"></div>
+ <div class="rules"><b>How to play</b><br>Match the top card by color or number. Skip misses the next player; Reverse changes direction. If you can't play, draw one card and your turn ends. First player to empty their hand wins.</div></section>`;
+ document.getElementById("create").onclick=()=>{myName=getName();if(myName)socket.emit("createRoom",{name:myName});};
+ document.getElementById("join").onclick=()=>{myName=getName();const code=document.getElementById("code").value.trim().toUpperCase();if(!myName)return; if(!code){document.getElementById("error").textContent="Enter a room code.";return;}socket.emit("joinRoom",{code,name:myName});};
+}
+function getName(){const n=document.getElementById("name").value.trim();if(!n){document.getElementById("error").textContent="Please enter a nickname.";return "";}return n.slice(0,18);}
+function lobby(){
+ const me=state.players.find(p=>p.id===socket.id);
+ app.innerHTML=`<section class="lobby"><div class="lobby-head"><div><div class="small" style="color:#c0d7cd">ROOM CODE</div><div class="code">${state.code}</div></div><button class="btn secondary" id="copy">Copy code</button></div>
+ <p style="color:#c0d7cd">Share this code with friends. ${state.players.length}/8 players joined.</p>
+ <div class="players">${state.players.map(p=>`<div class="player"><b>${esc(p.name)}</b><div class="badge">${p.isHost?"HOST": "PLAYER"}${p.id===socket.id?" · YOU":""}</div></div>`).join("")}</div>
+ ${me&&me.isHost?`<button class="btn gold full" id="start" ${state.players.length<2?"disabled":""}>Start game</button>`:`<p style="text-align:center;color:#c0d7cd">Waiting for the host to start…</p>`}
+ <div class="notice"></div><button class="btn secondary" id="leave" style="margin-top:14px">Leave room</button></section>`;
+ document.getElementById("copy").onclick=async()=>{try{await navigator.clipboard.writeText(state.code);showNotice("Room code copied!");}catch{showNotice("Room code: "+state.code)}};
+ const start=document.getElementById("start");if(start)start.onclick=()=>socket.emit("startGame");
+ document.getElementById("leave").onclick=()=>{location.reload();};
+}
+function game(){
+ const me=state.players.find(p=>p.id===socket.id);
+ const myTurn=state.turnId===socket.id;
+ const top=state.discard[state.discard.length-1];
+ const others=state.players.filter(p=>p.id!==socket.id);
+ app.innerHTML=`<section class="table"><div class="tabletop"><div><b>Room ${state.code}</b><div class="small" style="color:#c0d7cd">${state.direction===1?"Clockwise":"Counter-clockwise"} direction</div></div><div class="pill">${myTurn?"Your turn":esc(state.turnName)+"'s turn"}</div></div>
+ <div class="opponents">${others.map(p=>`<div class="opponent ${p.isCurrent?"active":""}"><b>${esc(p.name)}</b><small>${p.count} cards ${p.isCurrent?"· TURN":""}</small></div>`).join("")}</div>
+ <div class="arena"><div class="pile"><label>DRAW PILE · ${state.deckCount}</label><div class="card back" id="draw"><span>UNO</span></div></div>
+ <div class="pile"><label>DISCARD PILE</label>${cardHTML(top)}</div></div>
+ <div class="handarea"><div class="notice">${esc(state.message||"")}</div><div class="small" style="color:#c0d7cd">YOUR HAND · ${state.hand.length} cards</div>
+ <div class="hand">${state.hand.map((c,i)=>{const can=myTurn&&(c.color===top.color||c.value===top.value);return `<div class="card ${c.color} ${can?"playable":"dim"}" data-index="${i}"><span>${cardLabel(c)}</span></div>`}).join("")}</div>
+ <div class="actions"><button class="btn gold" id="drawBtn" ${!myTurn?"disabled":""}>Draw 1 card</button></div></div></section>`;
+ document.querySelectorAll(".hand .card.playable").forEach(el=>el.onclick=()=>socket.emit("playCard",{cardIndex:Number(el.dataset.index)}));
+ document.getElementById("draw").onclick=()=>{if(myTurn)socket.emit("drawCard")};
+ document.getElementById("drawBtn").onclick=()=>{if(myTurn)socket.emit("drawCard")};
+}
+function winner(){
+ const me=state.players.find(p=>p.id===socket.id);
+ app.innerHTML=`<section class="winner"><div style="font-size:52px">🏆</div><h1>${esc(state.winner)} wins!</h1><p>Great game! The first player to play all their cards wins Card Clash Lite.</p>
+ ${me&&me.isHost?`<button class="btn gold" id="again">Play again</button>`:`<p class="small" style="color:#c0d7cd">Waiting for the host to start another game…</p>`}
+ <button class="btn secondary" id="lobbyBtn" style="margin-left:8px">Back to room</button></section>`;
+ const again=document.getElementById("again");if(again)again.onclick=()=>socket.emit("playAgain");
+ document.getElementById("lobbyBtn").onclick=()=>{showNotice("The room stays open. The host can start another round.");};
+}
+home();
+</script></body></html>
